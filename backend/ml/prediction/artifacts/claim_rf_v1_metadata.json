@@ -1,0 +1,16 @@
+{
+  "model_name": "Random Forest Regressor",
+  "model_version": "v1.0.0",
+  "target": "approved_amt",
+  "trained_at": "2026-09-01T10:57:58.759095",
+  "total_records": 19939,
+  "training_records": 15951,
+  "testing_records": 3988,
+  "metrics": {
+    "mae": 182616.31522065605,
+    "rmse": 1319961.595594466,
+    "r2": 0.959809113013535
+  },
+  "training_mode": "manual_only",
+  "automatic_retraining": false
+}

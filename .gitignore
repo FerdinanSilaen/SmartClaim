@@ -1,0 +1,41 @@
+# Rahasia dan konfigurasi lokal
+.env
+.env.*
+!.env.example
+
+# Python virtual environment dan cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Database lokal
+database/
+*.db
+*.sqlite
+*.sqlite3
+
+# Dataset klaim
+data/
+*.xlsx
+*.xls
+*.csv
+
+# Flutter/Dart
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/android/.gradle/
+frontend/ios/Pods/
+
+# IDE dan sistem
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Log
+*.log

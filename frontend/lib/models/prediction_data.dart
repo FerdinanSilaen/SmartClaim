@@ -1,3 +1,23 @@
+// ============================================================
+// NUMBER HELPER
+// ============================================================
+
+double _number(dynamic value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+
+  return double.tryParse(
+        value?.toString() ?? '',
+      ) ??
+      0;
+}
+
+
+// ============================================================
+// ENTITY OPTION
+// ============================================================
+
 class PredictionEntityOption {
   final String code;
   final String name;
@@ -53,9 +73,7 @@ class PredictionFilters {
   factory PredictionFilters.fromJson(
     Map<String, dynamic> json,
   ) {
-    List<String> stringList(
-      dynamic value,
-    ) {
+    List<String> stringList(dynamic value) {
       if (value is! List) {
         return [];
       }
@@ -82,41 +100,32 @@ class PredictionFilters {
           .map(
             (item) =>
                 PredictionEntityOption.fromJson(
-              Map<String, dynamic>.from(
-                item,
-              ),
+              Map<String, dynamic>.from(item),
             ),
           )
           .toList();
     }
 
     return PredictionFilters(
-      coverages:
-          stringList(
+      coverages: stringList(
         json['coverages'],
       ),
-      planCodes:
-          stringList(
+      planCodes: stringList(
         json['plan_codes'],
       ),
-      admissionTypes:
-          stringList(
+      admissionTypes: stringList(
         json['admission_types'],
       ),
-      claimTypes:
-          stringList(
+      claimTypes: stringList(
         json['claim_types'],
       ),
-      diagnoses:
-          stringList(
+      diagnoses: stringList(
         json['diagnoses'],
       ),
-      providers:
-          entityList(
+      providers: entityList(
         json['providers'],
       ),
-      corporations:
-          entityList(
+      corporations: entityList(
         json['corporations'],
       ),
     );
@@ -156,111 +165,20 @@ class PredictionModelStatus {
   factory PredictionModelStatus.fromJson(
     Map<String, dynamic> json,
   ) {
-    double number(
-      dynamic value,
-    ) {
-      if (value is num) {
-        return value.toDouble();
-      }
-
-      return double.tryParse(
-            value?.toString() ?? '',
-          ) ??
-          0;
-    }
-
     return PredictionModelStatus(
-      ready:
-          json['ready'] == true,
+      ready: json['ready'] == true,
       modelName:
-          json['model_name']?.toString() ??
-              '',
+          json['model_name']?.toString() ?? '',
       modelVersion:
-          json['model_version']?.toString() ??
-              '',
-      target:
-          json['target']?.toString() ?? '',
-      r2:
-          number(
-        json['r2'],
-      ),
-      mae:
-          number(
-        json['mae'],
-      ),
-      rmse:
-          number(
-        json['rmse'],
-      ),
+          json['model_version']?.toString() ?? '',
+      target: json['target']?.toString() ?? '',
+      r2: _number(json['r2']),
+      mae: _number(json['mae']),
+      rmse: _number(json['rmse']),
       automaticRetraining:
-          json['automatic_retraining'] ==
-              true,
+          json['automatic_retraining'] == true,
       explainableAi:
-          json['explainable_ai']
-                  ?.toString() ??
-              'SHAP',
-    );
-  }
-}
-
-
-// ============================================================
-// SHAP FACTOR
-// ============================================================
-
-class PredictionFactor {
-  final String feature;
-  final String label;
-
-  final dynamic value;
-
-  final double contributionPct;
-  final String direction;
-  final double shapValue;
-
-  const PredictionFactor({
-    required this.feature,
-    required this.label,
-    required this.value,
-    required this.contributionPct,
-    required this.direction,
-    required this.shapValue,
-  });
-
-  factory PredictionFactor.fromJson(
-    Map<String, dynamic> json,
-  ) {
-    double number(
-      dynamic value,
-    ) {
-      if (value is num) {
-        return value.toDouble();
-      }
-
-      return double.tryParse(
-            value?.toString() ?? '',
-          ) ??
-          0;
-    }
-
-    return PredictionFactor(
-      feature:
-          json['feature']?.toString() ?? '',
-      label:
-          json['label']?.toString() ?? '',
-      value:
-          json['value'],
-      contributionPct:
-          number(
-        json['contribution_pct'],
-      ),
-      direction:
-          json['direction']?.toString() ??
-              'neutral',
-      shapValue:
-          number(
-        json['shap_value'],
-      ),
+          json['explainable_ai']?.toString() ?? '',
     );
   }
 }
@@ -280,13 +198,6 @@ class PredictionResult {
   final double estimatedDifference;
   final double approvalRatio;
 
-  final String explainabilityMethod;
-
-  final List<PredictionFactor> topFactors;
-
-  final String explanationSummary;
-  final String aiBrief;
-
   const PredictionResult({
     required this.modelName,
     required this.modelVersion,
@@ -295,84 +206,81 @@ class PredictionResult {
     required this.predictedApprovedAmount,
     required this.estimatedDifference,
     required this.approvalRatio,
-    required this.explainabilityMethod,
-    required this.topFactors,
-    required this.explanationSummary,
-    required this.aiBrief,
   });
 
   factory PredictionResult.fromJson(
     Map<String, dynamic> json,
   ) {
-    double number(
-      dynamic value,
-    ) {
-      if (value is num) {
-        return value.toDouble();
-      }
-
-      return double.tryParse(
-            value?.toString() ?? '',
-          ) ??
-          0;
-    }
-
-    final rawFactors =
-        json['top_factors'];
-
-    final factors =
-        rawFactors is List
-            ? rawFactors
-                .whereType<Map>()
-                .map(
-                  (item) =>
-                      PredictionFactor.fromJson(
-                    Map<String, dynamic>.from(
-                      item,
-                    ),
-                  ),
-                )
-                .toList()
-            : <PredictionFactor>[];
-
     return PredictionResult(
       modelName:
-          json['model_name']?.toString() ??
-              '',
+          json['model_name']?.toString() ?? '',
       modelVersion:
-          json['model_version']?.toString() ??
-              '',
+          json['model_version']?.toString() ?? '',
       target:
           json['target']?.toString() ?? '',
       incurredAmount:
-          number(
-        json['incurred_amt'],
-      ),
+          _number(json['incurred_amt']),
       predictedApprovedAmount:
-          number(
+          _number(
         json['predicted_approved_amt'],
       ),
       estimatedDifference:
-          number(
+          _number(
         json['estimated_difference'],
       ),
       approvalRatio:
-          number(
-        json['approval_ratio'],
+          _number(json['approval_ratio']),
+    );
+  }
+}
+
+
+// ============================================================
+// GEMINI ANALYSIS RESULT
+// ============================================================
+
+class GeminiClaimAnalysis {
+  final String status;
+  final String model;
+  final String analysis;
+
+  final double incurredAmount;
+  final double predictedApprovedAmount;
+  final double estimatedDifference;
+  final double approvalRatio;
+
+  const GeminiClaimAnalysis({
+    required this.status,
+    required this.model,
+    required this.analysis,
+    required this.incurredAmount,
+    required this.predictedApprovedAmount,
+    required this.estimatedDifference,
+    required this.approvalRatio,
+  });
+
+  factory GeminiClaimAnalysis.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return GeminiClaimAnalysis(
+      status:
+          json['status']?.toString() ?? '',
+      model:
+          json['model']?.toString() ?? '',
+      analysis:
+          json['analysis']?.toString() ?? '',
+      incurredAmount:
+          _number(json['incurred_amount']),
+      predictedApprovedAmount:
+          _number(
+        json['predicted_approved_amount'],
       ),
-      explainabilityMethod:
-          json['explainability_method']
-                  ?.toString() ??
-              'SHAP',
-      topFactors:
-          factors,
-      explanationSummary:
-          json['explanation_summary']
-                  ?.toString() ??
-              '',
-      aiBrief:
-          json['ai_brief']?.toString() ??
-              '',
+      estimatedDifference:
+          _number(
+        json['estimated_difference'],
+      ),
+      approvalRatio:
+          _number(json['approval_ratio']),
     );
   }
 }

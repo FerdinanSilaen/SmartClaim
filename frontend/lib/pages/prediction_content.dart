@@ -37,12 +37,17 @@ class _PredictionContentState
   PredictionFilters? filters;
   PredictionModelStatus? modelStatus;
   PredictionResult? result;
+  GeminiClaimAnalysis? geminiAnalysis;
 
 
   bool initialLoading = true;
   bool predicting = false;
+  bool analyzingWithGemini = false;
 
   String? errorMessage;
+  String? geminiErrorMessage;
+
+  int _requestId = 0;
 
 
   String? selectedCoverage;
@@ -180,10 +185,16 @@ class _PredictionContentState
         ) ??
         0;
 
+    final requestId = ++_requestId;
+    final coverageId = selectedCoverage!;
+
     setState(() {
       predicting = true;
+      analyzingWithGemini = false;
       errorMessage = null;
+      geminiErrorMessage = null;
       result = null;
+      geminiAnalysis = null;
     });
 
     try {
@@ -194,7 +205,7 @@ class _PredictionContentState
         lengthOfStay:
             lengthOfStay,
         coverageId:
-            selectedCoverage!,
+            coverageId,
         planCode:
             selectedPlanCode!,
         admissionType:
@@ -209,21 +220,51 @@ class _PredictionContentState
             selectedDiagnosis!,
       );
 
-      if (!mounted) {
+      if (!mounted || requestId != _requestId) {
         return;
       }
 
       setState(() {
         result = prediction;
         predicting = false;
+        analyzingWithGemini = true;
       });
+
+      try {
+        final analysis =
+            await PredictionService
+                .analyzeWithGemini(
+          prediction: prediction,
+          coverageId: coverageId,
+          lengthOfStay: lengthOfStay,
+        );
+
+        if (!mounted || requestId != _requestId) {
+          return;
+        }
+
+        setState(() {
+          geminiAnalysis = analysis;
+          analyzingWithGemini = false;
+        });
+      } catch (error) {
+        if (!mounted || requestId != _requestId) {
+          return;
+        }
+
+        setState(() {
+          analyzingWithGemini = false;
+          geminiErrorMessage = error.toString();
+        });
+      }
     } catch (error) {
-      if (!mounted) {
+      if (!mounted || requestId != _requestId) {
         return;
       }
 
       setState(() {
         predicting = false;
+        analyzingWithGemini = false;
         errorMessage =
             error.toString();
       });
@@ -236,6 +277,8 @@ class _PredictionContentState
   // ============================================================
 
   void _reset() {
+    _requestId++;
+
     _incurredController.clear();
 
     _lengthOfStayController.text =
@@ -253,7 +296,11 @@ class _PredictionContentState
       selectedDiagnosis = 'UNKNOWN';
 
       result = null;
+      geminiAnalysis = null;
       errorMessage = null;
+      geminiErrorMessage = null;
+      predicting = false;
+      analyzingWithGemini = false;
     });
   }
 
@@ -448,6 +495,12 @@ class _PredictionContentState
             _buildResultSection(
               result!,
             ),
+
+            const SizedBox(
+              height: 22,
+            ),
+
+            _buildGeminiSection(),
           ],
 
 
@@ -1013,11 +1066,13 @@ class _PredictionContentState
                   child:
                       FilledButton.icon(
                     onPressed:
-                        predicting
+                        predicting ||
+                                analyzingWithGemini
                             ? null
                             : _predict,
                     icon:
-                        predicting
+                        predicting ||
+                                analyzingWithGemini
                             ? const SizedBox(
                                 width: 17,
                                 height: 17,
@@ -1035,7 +1090,9 @@ class _PredictionContentState
                         Text(
                       predicting
                           ? 'Predicting...'
-                          : 'Predict Claim',
+                          : analyzingWithGemini
+                              ? 'Analyzing...'
+                              : 'Predict Claim',
                     ),
                     style:
                         FilledButton.styleFrom(
@@ -1057,7 +1114,8 @@ class _PredictionContentState
 
                 OutlinedButton.icon(
                   onPressed:
-                      predicting
+                      predicting ||
+                              analyzingWithGemini
                           ? null
                           : _reset,
                   icon:
@@ -1309,6 +1367,271 @@ class _PredictionContentState
           ),
         ],
       ),
+    );
+  }
+
+  // ============================================================
+  // GEMINI AI ANALYSIS
+  // ============================================================
+
+  Widget _buildGeminiSection() {
+    if (analyzingWithGemini) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: _geminiCardDecoration(),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Color(0xFF7C3AED),
+              ),
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Generating AI Analysis...',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Gemini sedang menganalisis hasil Random Forest.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (geminiErrorMessage != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFFFDE68A),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFD97706),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Gemini AI Analysis belum tersedia',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    geminiErrorMessage!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.45,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Hasil prediksi Random Forest tetap valid dan dapat digunakan.',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFFB45309),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final data = geminiAnalysis;
+
+    if (data == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: _geminiCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF2563EB),
+                      Color(0xFF7C3AED),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Gemini AI Analysis',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Analisis hasil Random Forest • ${data.model}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_circle_rounded,
+                      size: 13,
+                      color: Color(0xFF16A34A),
+                    ),
+                    SizedBox(width: 5),
+                    Text(
+                      'AI Generated',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(17),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFE0E7FF),
+              ),
+            ),
+            child: SelectableText(
+              data.analysis,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.65,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 15,
+                color: Color(0xFF64748B),
+              ),
+              SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  'Analisis AI merupakan penjelasan tambahan dan bukan keputusan final approval atau reject.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.4,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  BoxDecoration _geminiCardDecoration() {
+    return BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFF8FAFF),
+          Color(0xFFF5F3FF),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: const Color(0xFFC7D2FE),
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0A4F46E5),
+          blurRadius: 18,
+          offset: Offset(0, 6),
+        ),
+      ],
     );
   }
 

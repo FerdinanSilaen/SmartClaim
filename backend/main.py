@@ -19,6 +19,10 @@ from backend.routers.prediction import (
     router as prediction_router,
 )
 
+from backend.routers.gemini import (
+    router as gemini_router,
+)
+
 
 # ============================================================
 # FASTAPI APP
@@ -26,9 +30,10 @@ from backend.routers.prediction import (
 
 app = FastAPI(
     title="SmartClaim API",
-    version="1.3.0",
+    version="1.4.0",
     description=(
-        "SmartClaim Health Claim Intelligence API"
+        "SmartClaim Health Claim Intelligence API "
+        "with Gemini AI Analysis"
     ),
 )
 
@@ -66,6 +71,10 @@ app.include_router(
     prediction_router
 )
 
+app.include_router(
+    gemini_router
+)
+
 
 # ============================================================
 # ROOT
@@ -76,8 +85,9 @@ def root():
 
     return {
         "app": "SmartClaim API",
-        "version": "1.3.0",
+        "version": "1.4.0",
         "status": "running",
+        "gemini_ai": "enabled",
     }
 
 

@@ -22,3 +22,7 @@ uvicorn backend.main:app --reload
 
 cd E:\SmartClaim\frontend
 flutter run -d chrome
+
+git add .
+git commit -m "Update fitur SmartClaim"
+git push
